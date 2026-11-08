@@ -130,25 +130,25 @@ jobs:
           rm -f ./ccache &
           
           echo "正在克隆源码仓库..."
-          aria2c -s16 -x16 -k1M https://github.com/cctv18/android_gki_kernel_common/archive/refs/heads/android16-6.12-2026-03.zip -o common.zip && 
+          aria2c -s16 -x16 -k1M --max-tries=10 --retry-wait=15 --timeout=60 --connect-timeout=30 https://github.com/cctv18/android_gki_kernel_common/archive/refs/heads/android16-6.12-2026-03.zip -o common.zip && 
           unzip -q common.zip && 
           mv "android_gki_kernel_common-android16-6.12-2026-03" common &&
           rm -rf common.zip &
           
           echo "正在克隆llvm-clang19工具链..." &&
           mkdir -p clang19 &&
-          aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang19-r536225/clang-r536225.zip -o clang.zip &&
+          aria2c -s16 -x16 -k1M --max-tries=10 --retry-wait=15 --timeout=60 --connect-timeout=30 https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang19-r536225/clang-r536225.zip -o clang.zip &&
           unzip -q clang.zip -d clang19 &&
           rm -rf clang.zip &
           
           echo "正在克隆Rust 1.82.0工具链..." &&
           mkdir -p rust &&
-          aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang19-r536225/rust.zip -o rust.zip &&
+          aria2c -s16 -x16 -k1M --max-tries=10 --retry-wait=15 --timeout=60 --connect-timeout=30 https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang19-r536225/rust.zip -o rust.zip &&
           unzip -q rust.zip -d rust &&
           rm -rf rust.zip &
           
           echo "正在克隆构建工具..." &&
-          aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang19-r536225/build-tools.zip -o build-tools.zip &&
+          aria2c -s16 -x16 -k1M --max-tries=10 --retry-wait=15 --timeout=60 --connect-timeout=30 https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang19-r536225/build-tools.zip -o build-tools.zip &&
           unzip -q build-tools.zip &&
           rm -rf build-tools.zip &
           
