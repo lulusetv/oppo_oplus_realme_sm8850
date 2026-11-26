@@ -5,7 +5,7 @@ env:
   ANDROID_VERSION: 'android16'
   KERNEL_VERSION: '6.12'
   SUB_VERSION: '69_gki'
-  KERNEL_NAME: 'android16-6-g242e1a07f878-ab15865446-4k'
+  KERNEL_NAME: 'android16-6-g242e1a07f878-ab15865446'
   CCACHE_KEY: ccache-ecsv4-gki-6.12.69
 
 on:
@@ -299,12 +299,11 @@ jobs:
           if [[ ${{ github.event.inputs.ksu_type }} != "none" ]]; then
             echo "正在添加susfs补丁..."
             git clone --depth=1 https://github.com/cctv18/susfs4oki.git susfs4ksu -b oki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
-            # 用本仓库重建过的补丁覆盖上游（修复 task_mmu.c hunk4 上下文错位）
-            SUSFS_URL=https://raw.githubusercontent.com/$GITHUB_REPOSITORY/refs/heads/$GITHUB_REF_NAME/susfs_patch/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
-            if wget -q --tries=3 --timeout=30 "$SUSFS_URL" -O ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch; then
-              echo "已使用本仓库重建的 SUSFS 补丁, hunk数:"; grep -c '^@@' ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
-            else
-              echo "WARN: 未获取到本地补丁, 回退上游版本"
+            # 用仓库内针对 6.12.69 修正过的补丁覆盖上游（修复 task_mmu.c hunk4 上下文错位）
+            PATCH_FILE=susfs_patch/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
+            if [ -f "$GITHUB_WORKSPACE/$PATCH_FILE" ]; then
+              echo "使用本地修正补丁: $PATCH_FILE"
+              cp "$GITHUB_WORKSPACE/$PATCH_FILE" ./susfs4ksu/kernel_patches/
             fi
             cp ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
             cp ./susfs4ksu/kernel_patches/fs/* ./common/fs/
@@ -556,13 +555,13 @@ jobs:
             for f in ./common/scripts/setlocalversion; do
               sed -i "\$s|echo \"\\\$res\"|echo \"-${{ github.event.inputs.kernel_suffix }}\"|" "$f"
             done
-            sudo sed -i 's/-4k/-${{ github.event.inputs.KERNEL_SUFFIX }}/g' ./common/arch/arm64/configs/gki_defconfig
+            sudo sed -i 's|^CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION=""|' ./common/arch/arm64/configs/gki_defconfig
           else
-            echo "当前内核版本后缀：${{ env.KERNEL_NAME }}"
+            echo "当前内核版本后缀：${{ env.KERNEL_NAME }}-4k (对齐原厂模式)"
             for f in ./common/scripts/setlocalversion; do
               sed -i "\$s|echo \"\\\$res\"|echo \"-${{ env.KERNEL_NAME }}\"|" "$f"
             done
-            sudo sed -i 's/-4k/-${{ env.KERNEL_NAME }}/g' ./common/arch/arm64/configs/gki_defconfig
+            # CONFIG_LOCALVERSION 保持 "-4k" 不变，setlocalversion 只输出 android16-6-g... 段
           fi
           sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
           echo "CONFIG_LOCALVERSION_AUTO=n" >> ./common/arch/arm64/configs/gki_defconfig
@@ -748,7 +747,7 @@ jobs:
           if [[ -n "${{ github.event.inputs.kernel_suffix }}" ]]; then
             AK3_NAME=AnyKernel3_${KSU_TYPENAME}_${{ env.KSUVER }}_${{ env.KERNEL_VERSION }}_${{ github.event.inputs.kernel_suffix }}.zip
           else
-            AK3_NAME=AnyKernel3_${KSU_TYPENAME}_${{ env.KSUVER }}_${{ env.KERNEL_VERSION }}_${{ env.KERNEL_NAME }}.zip
+            AK3_NAME=AnyKernel3_${KSU_TYPENAME}_${{ env.KSUVER }}_${{ env.KERNEL_VERSION }}_${{ env.KERNEL_NAME }}-4k.zip
           fi
           zip -r ../$AK3_NAME ./*
           echo "ak3name=$AK3_NAME" >> $GITHUB_OUTPUT
@@ -759,7 +758,7 @@ jobs:
           if [[ -n "${{ github.event.inputs.kernel_suffix }}" ]]; then
             FULL_VERSION=${{ env.KERNEL_VERSION }}.${CLEAN_SUB_VERSION}-${{ github.event.inputs.kernel_suffix }}
           else
-            FULL_VERSION=${{ env.KERNEL_VERSION }}.${CLEAN_SUB_VERSION}-${{ env.KERNEL_NAME }}
+            FULL_VERSION=${{ env.KERNEL_VERSION }}.${CLEAN_SUB_VERSION}-${{ env.KERNEL_NAME }}-4k
           fi
           TIME_NOW="$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')"
           echo "Author: $GITHUB_ACTOR" > ./ak3.log
@@ -821,7 +820,7 @@ jobs:
             echo "FULL_VERSION=$FULL_VERSION" >> $GITHUB_ENV
             export FULL_VERSION=$FULL_VERSION
           else
-            FULL_VERSION=${{ env.KERNEL_VERSION }}.${CLEAN_SUB_VERSION}-${{ env.KERNEL_NAME }}
+            FULL_VERSION=${{ env.KERNEL_VERSION }}.${CLEAN_SUB_VERSION}-${{ env.KERNEL_NAME }}-4k
             echo "FULL_VERSION=$FULL_VERSION" >> $GITHUB_ENV
             export FULL_VERSION=$FULL_VERSION
           fi
