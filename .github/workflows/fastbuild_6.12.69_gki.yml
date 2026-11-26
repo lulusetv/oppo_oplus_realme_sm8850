@@ -261,13 +261,20 @@ jobs:
             curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/refs/heads/main/kernel/setup.sh" | bash -s main
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@cctv18"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
+            # ===== 固定到 35171 对应 commit (6803643e19e2) : 原生 uapi 4 =====
+            git checkout -f 6803643e19e2
+            echo "HEAD=$(git rev-parse --short HEAD) count=$(git rev-list --count HEAD)"
+            echo "uapi=$(grep -o 'KERNEL_SU_UAPI_VERSION = [0-9]*' ./uapi/supercall.h | head -1)"
+            if [ -e ./kernel/feature/shell_su_adb_only.c ]; then echo "ERROR: shell_su_adb_only.c exists"; exit 1; fi
+            echo "OK: shell_su_adb_only.c absent (expected)"
             # 生成自定义版本号（基于提交计数）, 失败时使用 114514
-            KSU_VERSION=$(expr $(git rev-list --count main) + 30700 2>/dev/null || echo 114514)
+            KSU_VERSION=$(expr $(git rev-list --count HEAD) + 30700 2>/dev/null || echo 114514)
+                        echo "[VER] count(HEAD)=$(git rev-list --count HEAD) KSU_VERSION=$KSU_VERSION (expect 35171)"
             # 存储版本号到 GitHub 环境变量
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
             sh -c "curl -LSs https://raw.githubusercontent.com/$GITHUB_REPOSITORY/refs/heads/$GITHUB_REF_NAME/other_patch/fix_dynamic_manager.sh | sh"
-            sh -c "curl -LSs https://raw.githubusercontent.com/$GITHUB_REPOSITORY/refs/heads/$GITHUB_REF_NAME/other_patch/fix_uapi4.sh | sh -s -- ./uapi/supercall.h"
+            # uapi 由 commit 6803643e19e2 原生保证为 4，无需修改
           elif [[ ${{ github.event.inputs.ksu_type }} == "ksunext" ]]; then
             echo "正在配置KernelSU Next..."
             curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
@@ -570,17 +577,7 @@ jobs:
            
       - name: 构建内核
         run: |
-          # 强制 KSU uapi = 4：对所有 supercall.h 副本全局替换（绕开 include 路径不确定性）
-          echo "===== FORCE UAPI=4 ====="
-          find . -name supercall.h -type f -o -name supercall.h -type l 2>/dev/null | while read -r f; do
-            if grep -q "KERNEL_SU_UAPI_VERSION = [0-9]" "$f" 2>/dev/null; then
-              sed -i "s/KERNEL_SU_UAPI_VERSION = [0-9][0-9]*/KERNEL_SU_UAPI_VERSION = 4/" "$f"
-              echo "patched: $f -> $(grep -o 'KERNEL_SU_UAPI_VERSION = [0-9]*' "$f" | head -1)"
-            fi
-          done
-          echo "--- verify ---"
-          find . -name supercall.h 2>/dev/null | while read -r f; do echo "$f : $(grep -o 'KERNEL_SU_UAPI_VERSION = [0-9]*' "$f" 2>/dev/null | head -1)"; done
-          echo "===== END FORCE ====="
+          # (已移除强制 uapi 改写：源码 commit 已原生为 uapi 4)
           WORKDIR="$(pwd)"
           export PATH="/usr/lib/ccache:$PATH"
           export PATH="$WORKDIR/kernel_workspace/clang19/bin:$PATH"
