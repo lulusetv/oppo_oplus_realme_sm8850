@@ -266,6 +266,31 @@ jobs:
             # 存储版本号到 GitHub 环境变量
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
+            cd ..
+            # === 修复 DYNAMIC_MANAGER 权限判定（only_root -> manager_or_root）===
+            # 上游 dispatch.c 把 KSU_IOCTL_DYNAMIC_MANAGER 配成了 only_root，
+            # 导致已加冕的管理器(非uid0)调用时被拒，日志出现 permission denied for cmd=0xc0004b67
+            DISP=./KernelSU/kernel/supercall/dispatch.c
+            if [ -f "$DISP" ]; then
+              echo "[PATCH] 修改前:"; grep -n "DYNAMIC_MANAGER" -A3 "$DISP" | grep perm_check || true
+              python3 - "$DISP" <<'PYFIX'
+import re,sys
+p=sys.argv[1]
+s=open(p).read()
+# 只改紧跟在 KSU_IOCTL_DYNAMIC_MANAGER 之后的那一处 perm_check
+pat=re.compile(r"(\.cmd\s*=\s*KSU_IOCTL_DYNAMIC_MANAGER\s*,[^}]*?\.perm_check\s*=\s*)only_root")
+new,n=pat.subn(r"\1manager_or_root",s,count=1)
+if n==0:
+    print("[PATCH] FAIL: 未匹配到 DYNAMIC_MANAGER 的 only_root")
+    sys.exit(1)
+open(p,"w").write(new)
+print("[PATCH] OK: 已改为 manager_or_root")
+PYFIX
+              echo "[PATCH] 修改后:"; grep -n "DYNAMIC_MANAGER" -A3 "$DISP" | grep perm_check || true
+              grep -q "manager_or_root" "$DISP" || { echo "[PATCH] 校验失败，终止编译"; exit 1; }
+            else
+              echo "[PATCH] 未找到 $DISP，跳过"; exit 1
+            fi
           elif [[ ${{ github.event.inputs.ksu_type }} == "ksunext" ]]; then
             echo "正在配置KernelSU Next..."
             curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
