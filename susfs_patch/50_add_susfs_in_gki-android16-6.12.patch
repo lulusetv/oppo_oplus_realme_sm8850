@@ -1399,7 +1399,7 @@ diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
 index c79267d5f..00d1fa464 100644
 --- a/fs/proc/task_mmu.c
 +++ b/fs/proc/task_mmu.c
-@@ -22,6 +22,9 @@
+@@ -23,6 +23,9 @@
  #include <linux/shmem_fs.h>
  #include <linux/uaccess.h>
  #include <linux/pkeys.h>
@@ -1409,7 +1409,7 @@ index c79267d5f..00d1fa464 100644
  #include <linux/minmax.h>
  #include <linux/overflow.h>
  #include <linux/buildid.h>
-@@ -531,6 +534,14 @@ static void show_vma_header_prefix(struct seq_file *m,
+@@ -455,6 +458,14 @@ static void show_vma_header_prefix(struct seq_file *m,
  	seq_putc(m, ' ');
  }
  
@@ -1424,7 +1424,7 @@ index c79267d5f..00d1fa464 100644
  static void
  show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
  {
-@@ -466,9 +476,47 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
+@@ -469,9 +480,47 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
  	if (vma->vm_file) {
  		const struct inode *inode = file_user_inode(vma->vm_file);
  
@@ -1472,7 +1472,7 @@ index c79267d5f..00d1fa464 100644
  	}
  
  	start = vma->vm_start;
-@@ -1304,6 +1353,13 @@ static int show_smap(struct seq_file *m, void *v)
+@@ -1330,6 +1379,13 @@ static int show_smap(struct seq_file *m, void *v)
  	struct vm_area_struct *vma = v;
  	struct mem_size_stats mss = {};
  
@@ -1486,7 +1486,7 @@ index c79267d5f..00d1fa464 100644
  	if (!vma_data_pages(vma))
  		goto show_pad;
  
-@@ -1363,7 +1412,15 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
+@@ -1390,7 +1446,15 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
  
  	vma_start = vma->vm_start;
  	do {
@@ -1502,7 +1502,7 @@ index c79267d5f..00d1fa464 100644
  		last_vma_end = vma->vm_end;
  
  		/*
-@@ -1429,8 +1486,14 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
+@@ -1463,8 +1527,14 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
  
  			/* Case 4 above */
  			if (vma->vm_end > last_vma_end) {
@@ -1517,7 +1517,7 @@ index c79267d5f..00d1fa464 100644
  			}
  		}
  	} for_each_vma(vmi, vma);
-@@ -2449,6 +2506,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -2255,6 +2325,9 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  	while (count && (start_vaddr < end_vaddr)) {
  		int len;
  		unsigned long end;
@@ -1527,7 +1527,7 @@ index c79267d5f..00d1fa464 100644
  
  		pm.pos = 0;
  		end = (start_vaddr + PAGEMAP_WALK_SIZE) & PAGEMAP_WALK_MASK;
-@@ -2458,7 +2518,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+@@ -2264,7 +2337,15 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
  		ret = mmap_read_lock_killable(mm);
  		if (ret)
  			goto out_free;
@@ -1543,6 +1543,7 @@ index c79267d5f..00d1fa464 100644
  		mmap_read_unlock(mm);
  		start_vaddr = end;
  
+
 diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
 index e133b507d..3dc4bfc56 100644
 --- a/fs/proc_namespace.c
