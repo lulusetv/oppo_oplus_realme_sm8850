@@ -268,9 +268,11 @@ jobs:
             if [ -e ./kernel/feature/shell_su_adb_only.c ]; then echo "ERROR: shell_su_adb_only.c exists"; exit 1; fi
             echo "OK: shell_su_adb_only.c absent (expected)"
             # ===== 关键：关闭 preinit（本 commit 无 preinit.c，但 susfs 补丁会引用它）=====
-            echo 'ccflags-y += -DKSU_NO_PREINIT' >> ./kernel/Kbuild
-            tail -3 ./kernel/Kbuild
-            echo "[PREINIT] KSU_NO_PREINIT injected"
+            # exec.c 里的 preinit 段用 #ifndef KSU_NO_PREINIT 包裹，直接加宏
+            # 写入 Kbuild 无效(管不到 fs/)，写入 Makefile 会被重设，故用 KCFLAGS
+            echo KCFLAGS+=" -DKSU_NO_PREINIT" >> ./common/Makefile
+            echo "[PREINIT] verify:"
+            tail -3 ./common/Makefile"
             # 生成自定义版本号（基于提交计数）, 失败时使用 114514
             KSU_VERSION=$(expr $(git rev-list --count HEAD) + 30700 2>/dev/null || echo 114514)
                         echo "[VER] count(HEAD)=$(git rev-list --count HEAD) KSU_VERSION=$KSU_VERSION (expect 35171)"
