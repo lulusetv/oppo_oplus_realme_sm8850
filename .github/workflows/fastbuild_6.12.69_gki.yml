@@ -570,6 +570,10 @@ jobs:
            
       - name: 构建内核
         run: |
+          echo "===== UAPI CHECK BEFORE BUILD ====="
+          grep -rn "KERNEL_SU_UAPI_VERSION = " KernelSU/uapi/supercall.h || echo "NOT FOUND"
+          echo "md5: $(md5sum KernelSU/uapi/supercall.h)"
+          echo "===== END CHECK ====="
           WORKDIR="$(pwd)"
           export PATH="/usr/lib/ccache:$PATH"
           export PATH="$WORKDIR/kernel_workspace/clang19/bin:$PATH"
