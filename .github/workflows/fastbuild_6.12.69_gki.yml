@@ -261,26 +261,17 @@ jobs:
             curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/refs/heads/main/kernel/setup.sh" | bash -s main
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-%COMMIT_SHA%@cctv18"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
-            # ===== 固定到 35171 对应 commit (6803643e19e2) : 原生 uapi 4 =====
-            git checkout -f 6803643e19e2
+            # 锁定 35171 / uapi 4
+            git checkout -f 239e1e8871b8
             echo "HEAD=$(git rev-parse --short HEAD) count=$(git rev-list --count HEAD)"
             echo "uapi=$(grep -o 'KERNEL_SU_UAPI_VERSION = [0-9]*' ./uapi/supercall.h | head -1)"
-            if [ -e ./kernel/feature/shell_su_adb_only.c ]; then echo "ERROR: shell_su_adb_only.c exists"; exit 1; fi
-            echo "OK: shell_su_adb_only.c absent (expected)"
-            # ===== 关键：关闭 preinit（本 commit 无 preinit.c，但 susfs 补丁会引用它）=====
-            # exec.c 里的 preinit 段用 #ifndef KSU_NO_PREINIT 包裹，直接加宏
-            # 写入 Kbuild 无效(管不到 fs/)，写入 Makefile 会被重设，故用 KCFLAGS
-            echo KCFLAGS+=" -DKSU_NO_PREINIT" >> ./common/Makefile
-            echo "[PREINIT] verify:"
-            tail -3 ./common/Makefile"
-            # 生成自定义版本号（基于提交计数）, 失败时使用 114514
+            if [ -e ./kernel/feature/shell_su_adb_only.c ]; then exit 1; fi
+            # 关闭 preinit（本 commit 无 preinit.c，susfs 补丁会引用）
+            echo "KSU_NO_PREINIT=1" >> $GITHUB_ENV
             KSU_VERSION=$(expr $(git rev-list --count HEAD) + 30700 2>/dev/null || echo 114514)
-                        echo "[VER] count(HEAD)=$(git rev-list --count HEAD) KSU_VERSION=$KSU_VERSION (expect 35171)"
-            # 存储版本号到 GitHub 环境变量
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
             sh -c "curl -LSs https://raw.githubusercontent.com/$GITHUB_REPOSITORY/refs/heads/$GITHUB_REF_NAME/other_patch/fix_dynamic_manager.sh | sh"
-            # uapi 由 commit 6803643e19e2 原生保证为 4，无需修改
           elif [[ ${{ github.event.inputs.ksu_type }} == "ksunext" ]]; then
             echo "正在配置KernelSU Next..."
             curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
@@ -673,6 +664,7 @@ jobs:
           KCFLAGS+=" -Wno-error"
           KCFLAGS+=" -fno-stack-protector"
           KCFLAGS+=" -D__ANDROID_COMMON_KERNEL__"
+          if [ -n "$KSU_NO_PREINIT" ]; then KCFLAGS+=" -DKSU_NO_PREINIT"; fi
           export KCFLAGS
           # 4. 配置其他工具及选项（非必须，防错冗余）
           export HOSTCC=clang
