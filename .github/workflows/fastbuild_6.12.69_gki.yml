@@ -570,10 +570,17 @@ jobs:
            
       - name: 构建内核
         run: |
-          echo "===== UAPI CHECK BEFORE BUILD ====="
-          grep -rn "KERNEL_SU_UAPI_VERSION = " KernelSU/uapi/supercall.h || echo "NOT FOUND"
-          echo "md5: $(md5sum KernelSU/uapi/supercall.h)"
-          echo "===== END CHECK ====="
+          # 强制 KSU uapi = 4：对所有 supercall.h 副本全局替换（绕开 include 路径不确定性）
+          echo "===== FORCE UAPI=4 ====="
+          find . -name supercall.h -type f -o -name supercall.h -type l 2>/dev/null | while read -r f; do
+            if grep -q "KERNEL_SU_UAPI_VERSION = [0-9]" "$f" 2>/dev/null; then
+              sed -i "s/KERNEL_SU_UAPI_VERSION = [0-9][0-9]*/KERNEL_SU_UAPI_VERSION = 4/" "$f"
+              echo "patched: $f -> $(grep -o 'KERNEL_SU_UAPI_VERSION = [0-9]*' "$f" | head -1)"
+            fi
+          done
+          echo "--- verify ---"
+          find . -name supercall.h 2>/dev/null | while read -r f; do echo "$f : $(grep -o 'KERNEL_SU_UAPI_VERSION = [0-9]*' "$f" 2>/dev/null | head -1)"; done
+          echo "===== END FORCE ====="
           WORKDIR="$(pwd)"
           export PATH="/usr/lib/ccache:$PATH"
           export PATH="$WORKDIR/kernel_workspace/clang19/bin:$PATH"
