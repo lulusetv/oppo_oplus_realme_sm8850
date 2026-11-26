@@ -165,11 +165,19 @@ echo ">>> 应用 SUSFS&hook 补丁..."
 if [[ "$APPLY_SUSFS" == [yY] ]]; then
   echo ">>> 克隆补丁仓库..."
   git clone --depth=1 https://github.com/cctv18/susfs4oki.git susfs4ksu -b oki-android16-6.12
+  # 优先使用本仓库内针对 6.12.69 修正过的补丁（修复 task_mmu.c hunk4 上下文错位）
+  if [ -f "$WORKDIR/../susfs_patch/50_add_susfs_in_gki-android16-6.12.patch" ]; then
+    echo ">>> 使用本地修正补丁：susfs_patch/"
+    cp "$WORKDIR/../susfs_patch/50_add_susfs_in_gki-android16-6.12.patch" ./susfs4ksu/kernel_patches/
+  fi
   cp ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-android16-6.12.patch ./common/
   cp ./susfs4ksu/kernel_patches/fs/* ./common/fs/
   cp ./susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
   cd ./common
-  patch -p1 -F 3 < 50_add_susfs_in_gki-android16-6.12.patch || true
+  if ! patch -p1 -F 0 < 50_add_susfs_in_gki-android16-6.12.patch; then
+    echo "FATAL: SUSFS 补丁应用失败（task_mmu.c 上下文不匹配），中止构建"
+    exit 1
+  fi
 else
   echo ">>> 未开启susfs，跳过susfs补丁配置..."
 fi
