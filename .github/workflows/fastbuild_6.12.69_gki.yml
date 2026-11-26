@@ -6,7 +6,7 @@ env:
   KERNEL_VERSION: '6.12'
   SUB_VERSION: '69_gki'
   KERNEL_NAME: 'android16-6-g242e1a07f878-ab15865446'
-  KERNEL_TAG: 'operit'
+  KERNEL_TAG: 'Hot'
   CCACHE_KEY: ccache-ecsv4-gki-6.12.69
 
 on:
